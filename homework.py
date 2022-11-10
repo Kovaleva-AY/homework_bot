@@ -92,6 +92,7 @@ def check_tokens():
 
 
 def main():
+    """Основная логика работы программы."""
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     STATUS = ''
