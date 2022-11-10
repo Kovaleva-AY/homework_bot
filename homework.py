@@ -27,12 +27,12 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """Отправляет сообщение в чат"""
+    """Отправляет сообщение в чат."""
     return bot.send_message(TELEGRAM_CHAT_ID, message)
 
 
 def get_api_answer(current_timestamp):
-    """Делает запрос к эндпоинту API-сервиса"""
+    """Делает запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     try:
@@ -69,7 +69,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """ Выбирает из списка конкретную домашнюю работу и ее статус """
+    """Выбирает из списка конкретную домашнюю работу и ее статус."""
     if 'homework_name' not in homework:
         raise KeyError('Отсутствует ключ "homework_name" в ответе API')
     if 'status' not in homework:
@@ -83,7 +83,7 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """ Проверяет токены на валидность """
+    """Проверяет токены на валидность."""
     ENV_VARS = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     if not all(ENV_VARS):
         print('Отсутствует переменная')
