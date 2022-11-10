@@ -1,12 +1,9 @@
 import logging
 import os
 import time
-import json
+from http import HTTPStatus
 import requests
 from telegram import Bot
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler, Updater
-
 from dotenv import load_dotenv 
 
 load_dotenv()
@@ -19,7 +16,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS = {'Authorization': f'OAuth PRACTICUM_TOKEN'}
+HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
 HOMEWORK_STATUSES = {
@@ -36,32 +33,50 @@ def send_message(bot, message):
 def get_api_answer(current_timestamp):
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    return response.json()
+    try:
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    except Exception as error:
+        logging.error(f'Ошибка при запросе к API: {error}')
+        raise Exception(f'Ошибка при запросе к API: {error}')
+    if response.status_code != HTTPStatus.OK:
+        status_code = response.status_code
+        logging.error(f'Ошибка {status_code}')
+        raise Exception(f'Ошибка {status_code}')
+    try:
+        return response.json()
+    except ValueError:
+        logging.error('Ошибка парсинга ответа из формата json')
+        raise ValueError('Ошибка парсинга ответа из формата json')
 
 
-
-#def check_response(response):#
-
-    #...
+def check_response(response):
+    
+    if type(response) is not dict:
+        raise TypeError('Ответ API отличен от словаря')
+    try:
+        list_works = response['homeworks']
+    except KeyError:
+        logging.error('Ошибка словаря по ключу homeworks')
+        raise KeyError('Ошибка словаря по ключу homeworks')
+    try:
+        homework = list_works[0]
+    except IndexError:
+        logging.error('Список домашних работ пуст')
+        raise IndexError('Список домашних работ пуст')
+    return homework
 
 
 def parse_status(homework):
-    homework_name = homework.get('homework_name')
-    if homework_name is None:
-        logging.error('Не удалось получить название работы')
-    homework_status = homework.get('status')
-    if homework_status is None:
-        logging.error('Не удалось получить статус работы')
-
-
-    #...
-    else:
-        verdict = HOMEWORK_STATUSES.get(homework_status)
-
-    #...
-
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    if 'homework_name' not in homework:
+        raise KeyError('Отсутствует ключ "homework_name" в ответе API')
+    if 'status' not in homework:
+        raise Exception('Отсутствует ключ "status" в ответе API')
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
+    if homework_status not in HOMEWORK_STATUSES:
+        raise Exception(f'Неизвестный статус работы: {homework_status}')
+    verdict = HOMEWORK_STATUSES[homework_status]
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
@@ -73,39 +88,20 @@ def check_tokens():
 
 
 def main():
-    #"""Основная логика работы бота."""
-
-    #...
-    
-
-    bot = Bot(token='TELEGRAM_TOKEN')
+    bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     STATUS = ''
-    #...
-
     while True:
-        #try:
+        try:
             response = get_api_answer(current_timestamp)
-
-            #...
-            message = parse_status((response))
-            
+            message = parse_status(check_response(response))
             if message != STATUS:
                 send_message(bot, message)
                 STATUS = message   
+                time.sleep(RETRY_TIME)
+        except Exception as error:
+            logging.error(f'Сбой в работе программы: {error}')
+            message = f'Сбой в работе программы: {error}'
             time.sleep(RETRY_TIME)
-            
-
-        #except Exception as error:
-            #message = f'Сбой в работе программы: {error}'
-            #...
-            #time.sleep(RETRY_TIME)
-        #else:
-            #...
-
 if __name__ == '__main__':
     main()
-
-
-
-  
