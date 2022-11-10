@@ -4,7 +4,7 @@ import time
 from http import HTTPStatus
 import requests
 from telegram import Bot
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -50,7 +50,7 @@ def get_api_answer(current_timestamp):
 
 
 def check_response(response):
-    
+
     if type(response) is not dict:
         raise TypeError('Ответ API отличен от словаря')
     try:
@@ -97,11 +97,13 @@ def main():
             message = parse_status(check_response(response))
             if message != STATUS:
                 send_message(bot, message)
-                STATUS = message   
+                STATUS = message
                 time.sleep(RETRY_TIME)
         except Exception as error:
             logging.error(f'Сбой в работе программы: {error}')
             message = f'Сбой в работе программы: {error}'
             time.sleep(RETRY_TIME)
+
+
 if __name__ == '__main__':
     main()
