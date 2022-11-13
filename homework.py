@@ -41,8 +41,43 @@ class UnknownHomeWorkStatusError(Error):
     pass
 
 
-class HomeWorkKeyError(Error):
+class APIRequestError(Error):
+    """Ошибка при запросе к API."""
+    pass
+
+
+class StatusError(Error):
+    """Ошибка в статусе."""
+    pass
+
+
+class StatusError(Error):
+    """Ошибка в статусе."""
+    pass
+
+
+class AnswerJsonError(ValueError):
+    """Ошибка парсинга ответа из формата json."""
+    pass
+
+
+class HomeWorkDictionaryError(KeyError):
+    """Ошибка словаря по ключу homeworks."""
+    pass
+
+
+class HomeWorkKeyError(KeyError):
     """Отсутствует ключ "homework_name" в ответе API."""
+    pass
+
+
+class APIResponseDifferentDictionary(TypeError):
+    """Ответ API отличен от словаря."""
+    pass
+
+
+class HomeworkListEmpty(IndexError):
+    """Список домашних работ пуст."""
     pass
 
 
@@ -61,29 +96,29 @@ def get_api_answer(current_timestamp):
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    except Exception as error:
-        raise Exception(f'Ошибка при запросе к API: {error}')
+    except APIRequestError as error:
+        raise APIRequestError(f'Ошибка при запросе к API: {error}')
     if response.status_code != HTTPStatus.OK:
         status_code = response.status_code
-        raise Exception(f'Ошибка {status_code}')
+        raise StatusError(f'Ошибка {status_code}')
     try:
         return response.json()
-    except ValueError:
-        raise ValueError('Ошибка парсинга ответа из формата json')
+    except AnswerJsonError:
+        raise AnswerJsonError('Ошибка парсинга ответа из формата json')
 
 
 def check_response(response):
     """Проверяет ответ API."""
     if type(response) is not dict:
-        raise TypeError('Ответ API отличен от словаря')
+        raise APIResponseDifferentDictionary('Ответ API отличен от словаря')
     try:
         list_works = response['homeworks']
-    except KeyError:
-        raise KeyError('Ошибка словаря по ключу homeworks')
+    except HomeWorkDictionaryError:
+        raise HomeWorkDictionaryError('Ошибка словаря по ключу homeworks')
     try:
         homework = list_works[0]
-    except IndexError:
-        raise IndexError('Список домашних работ пуст')
+    except HomeworkListEmpty:
+        raise HomeworkListEmpty('Список домашних работ пуст')
     return homework
 
 
@@ -96,7 +131,8 @@ def parse_status(homework):
     homework_name = homework['homework_name']
     homework_status = homework['status']
     if homework_status not in HOMEWORK_STATUSES:
-        raise UnknownHomeWorkStatusError(f'Неизвестный статус работы: {homework_status}')
+        raise UnknownHomeWorkStatusError(f'Неизвестный статус работы:'
+                                         f'{homework_status}')
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
