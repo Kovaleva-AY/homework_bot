@@ -26,9 +26,33 @@ HOMEWORK_STATUSES = {
 }
 
 
+class Error(Exception):
+    """Базовый класс исключений."""
+    pass
+
+
+class NoKeyInAPIResponseError(Error):
+    """Отсутствует ключ "status" в ответе API."""
+    pass
+
+
+class UnknownHomeWorkStatusError(Error):
+    """Неизвестный статус домашней работы."""
+    pass
+
+
+class HomeWorkKeyError(Error):
+    """Отсутствует ключ "homework_name" в ответе API."""
+    pass
+
+
 def send_message(bot, message):
     """Отправляет сообщение в чат."""
-    return bot.send_message(TELEGRAM_CHAT_ID, message)
+    try:
+        bot.send_message(TELEGRAM_CHAT_ID, message)
+        logging.info('Сообщение отправлено')
+    except Exception:
+        logging.error('Не удалось отправить сообщение')
 
 
 def get_api_answer(current_timestamp):
@@ -38,16 +62,13 @@ def get_api_answer(current_timestamp):
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     except Exception as error:
-        logging.error(f'Ошибка при запросе к API: {error}')
         raise Exception(f'Ошибка при запросе к API: {error}')
     if response.status_code != HTTPStatus.OK:
         status_code = response.status_code
-        logging.error(f'Ошибка {status_code}')
         raise Exception(f'Ошибка {status_code}')
     try:
         return response.json()
     except ValueError:
-        logging.error('Ошибка парсинга ответа из формата json')
         raise ValueError('Ошибка парсинга ответа из формата json')
 
 
@@ -58,12 +79,10 @@ def check_response(response):
     try:
         list_works = response['homeworks']
     except KeyError:
-        logging.error('Ошибка словаря по ключу homeworks')
         raise KeyError('Ошибка словаря по ключу homeworks')
     try:
         homework = list_works[0]
     except IndexError:
-        logging.error('Список домашних работ пуст')
         raise IndexError('Список домашних работ пуст')
     return homework
 
@@ -71,13 +90,13 @@ def check_response(response):
 def parse_status(homework):
     """Выбирает из списка конкретную домашнюю работу и ее статус."""
     if 'homework_name' not in homework:
-        raise KeyError('Отсутствует ключ "homework_name" в ответе API')
+        raise HomeWorkKeyError('Отсутствует ключ "homework_name" в ответе API')
     if 'status' not in homework:
-        raise Exception('Отсутствует ключ "status" в ответе API')
+        raise NoKeyInAPIResponseError('Отсутствует ключ "status" в ответе API')
     homework_name = homework['homework_name']
     homework_status = homework['status']
     if homework_status not in HOMEWORK_STATUSES:
-        raise Exception(f'Неизвестный статус работы: {homework_status}')
+        raise UnknownHomeWorkStatusError(f'Неизвестный статус работы: {homework_status}')
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -96,6 +115,9 @@ def main():
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     STATUS = ''
+    if not check_tokens():
+        logging.critical('Отсутствуют переменные окружения')
+        raise Exception('Отсутствуют переменные окружения')
     while True:
         try:
             response = get_api_answer(current_timestamp)
@@ -106,7 +128,7 @@ def main():
                 time.sleep(RETRY_TIME)
         except Exception as error:
             logging.error(f'Сбой в работе программы: {error}')
-            message = f'Сбой в работе программы: {error}'
+            send_message(bot, f'Сбой в работе программы: {error}')
             time.sleep(RETRY_TIME)
 
 
