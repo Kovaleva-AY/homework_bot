@@ -50,7 +50,7 @@ class APIRequestError(Error):
     pass
 
 
-class StatusError(Error):
+class StatusCodeError(Error):
     """Ошибка в статусе."""
 
     pass
@@ -111,7 +111,7 @@ def get_api_answer(current_timestamp):
         raise APIRequestError(f'Ошибка при запросе к API: {error}')
     if response.status_code != HTTPStatus.OK:
         status_code = response.status_code
-        raise StatusError(f'Ошибка {status_code}')
+        raise StatusCodeError(f'Ошибка {status_code}')
     try:
         return response.json()
     except AnswerJsonError:
