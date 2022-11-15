@@ -5,7 +5,16 @@ from http import HTTPStatus
 import requests
 from telegram import Bot
 from dotenv import load_dotenv
-
+from exceptions import (NoKeyInAPIResponseError,
+                        UnknownHomeWorkStatusError,
+                        APIRequestError,
+                        StatusCodeError,
+                        AnswerJsonError,
+                        HomeWorkDictionaryError,
+                        HomeWorkKeyError,
+                        APIResponseDifferentDictionary,
+                        HomeworkListEmpty,
+                        )
 load_dotenv()
 
 
@@ -24,72 +33,6 @@ HOMEWORK_STATUSES = {
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
-
-
-class Error(Exception):
-    """Базовый класс исключений."""
-
-    pass
-
-
-class NoKeyInAPIResponseError(Error):
-    """Отсутствует ключ "status" в ответе API."""
-
-    pass
-
-
-class UnknownHomeWorkStatusError(Error):
-    """Неизвестный статус домашней работы."""
-
-    pass
-
-
-class APIRequestError(Error):
-    """Ошибка при запросе к API."""
-
-    pass
-
-
-class StatusCodeError(Error):
-    """Ошибка в статусе."""
-
-    pass
-
-
-class StatusError(Error):
-    """Ошибка в статусе."""
-
-    pass
-
-
-class AnswerJsonError(ValueError):
-    """Ошибка парсинга ответа из формата json."""
-
-    pass
-
-
-class HomeWorkDictionaryError(KeyError):
-    """Ошибка словаря по ключу homeworks."""
-
-    pass
-
-
-class HomeWorkKeyError(KeyError):
-    """Отсутствует ключ "homework_name" в ответе API."""
-
-    pass
-
-
-class APIResponseDifferentDictionary(TypeError):
-    """Ответ API отличен от словаря."""
-
-    pass
-
-
-class HomeworkListEmpty(IndexError):
-    """Список домашних работ пуст."""
-
-    pass
 
 
 def send_message(bot, message):
@@ -151,16 +94,14 @@ def parse_status(homework):
 def check_tokens():
     """Проверяет токены на валидность."""
     ENV_VARS = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    if not all(ENV_VARS):
-        print('Отсутствует переменная')
-    else:
-        return True
+    return all(ENV_VARS)
 
 
 def main():
     """Основная логика работы программы."""
     bot = Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
+    current_error = ''
     STATUS = ''
     if not check_tokens():
         logging.critical('Отсутствуют переменные окружения')
@@ -175,8 +116,11 @@ def main():
                 time.sleep(RETRY_TIME)
         except Exception as error:
             logging.error(f'Сбой в работе программы: {error}')
-            send_message(bot, f'Сбой в работе программы: {error}')
-            time.sleep(RETRY_TIME)
+            message_error = str(f'Сбой в работе программы: {error}')
+            if message_error != current_error:
+                send_message(bot, message_error)
+                current_error = message_error
+        time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
