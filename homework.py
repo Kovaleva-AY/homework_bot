@@ -77,7 +77,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Выбирает из списка конкретную домашнюю работу и ее статус."""
+    """Выбирает из списка домашнюю работу и ее статус."""
     if 'homework_name' not in homework:
         raise HomeWorkKeyError('Отсутствует ключ "homework_name" в ответе API')
     if 'status' not in homework:
